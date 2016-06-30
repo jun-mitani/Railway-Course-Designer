@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+	<meta charset="utf-8">
+	<title>Railway Couse-Design Simulator</title>
+<style type="text/css">
+body {
+	font-family: "KozGoPro-Light", "小塚ゴシック Pro L", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "游ゴシック", YuGothic, "メイリオ", Meiryo, sans-serif;
+	font-size: 10pt;
+	color: #000000;
+	line-height: 150%;
+	overflow:auto;
+}
+
+#left {
+	float: left;
+	margin: 0px;
+	overflow: auto;
+	top: 0px;
+	left: 0px;
+	width: 260px;
+	height: 800px;
+	padding-bottom: 10px;
+}
+
+#app {
+	margin: 0px 0px 0px 260px;
+  	width: 800px; 
+	padding: 20px;
+}
+
+H1 {
+	font-size: 12pt;
+	margin: 5px;
+}
+
+H2 {
+	font-size: 12pt;
+	font-weight: bold;
+	margin: 10px 5px 5px 5px;
+}
+
+em {
+	font-weight: bold;	
+	color: #0000CC;
+	font-style: normal;	
+}
+
+.explain {
+	margin-left: 10px;
+}
+</style>
+<script type="text/javascript">
+	const ARC_ANGLE = Math.PI*0.25;
+	const UNIT_LENGTH = 80;
+
+	var courseArray;
+	const canvasName = 'mycanvas';
+	const lineWidthArray = [12, 10, 6, 4];
+	const colorArray = ["#1970c1", "#51b5ff", "#1970c1", "#51b5ff"];
+	const colorHead = "#51b5ff";
+
+	const INIT_X = 400;
+	const INIT_Y = 200;
+	
+	// 終点位置
+	var endX;
+	var endY;
+	
+	// 終点の角度
+	var endAngleDeg; // 水平ゼロ度 反時計回り
+	
+	var bLoopCourse = false; // 閉じたループにするか
+	var screenScale = 1.0;
+	var screenMoveX = 0;
+	var screenMoveY = 0;
+	
+	var preMouseX;
+	var preMouseY;
+	
+	var maxX, maxY, minX, miY;
+	
+	function initCourse() {
+		endX = INIT_X;
+		endY = INIT_Y;
+		endAngleDeg = 90;
+	}
+
+	function drawPoint(ctx, head) {
+		if(head) {
+			ctx.fillStyle = colorHead;
+			ctx.beginPath();
+			ctx.arc(endX, endY, 2, 0, Math.PI*2, true);
+			ctx.fill();
+		} else {
+			ctx.fillStyle = 'rgb(255, 255, 255)';
+			ctx.beginPath();
+			ctx.arc(endX, endY, 3, 0, Math.PI*2, true);
+			ctx.fill();
+		}
+		
+		minX = Math.min(minX, endX);
+		maxX = Math.max(maxX, endX);
+		minY = Math.min(minY, endY);
+		maxY = Math.max(maxY, endY);
+	}
+
+	function drawStraightLine(ctx, sx, sy, ex, ey) {
+		ctx.beginPath();
+		ctx.moveTo(sx, sy);
+		ctx.lineTo(ex, ey);
+		ctx.stroke();
+	}
+	
+	// 直線	   
+	function drawStraightRail(ctx) {
+		drawPoint(ctx, true);
+		var sx = endX;
+		var sy = endY;
+		var ex = sx + UNIT_LENGTH * Math.cos(endAngleDeg * Math.PI / 180.0);
+		var ey = sy + UNIT_LENGTH * Math.sin(endAngleDeg * Math.PI / 180.0);
+		
+		for (var i = 0; i < 4; i++) {
+			ctx.lineWidth = lineWidthArray[i];
+			ctx.strokeStyle = colorArray[i];
+			drawStraightLine(ctx, sx, sy, ex, ey);
+		}
+
+		endX = ex;
+		endY = ey;
+		
+		drawPoint(ctx, false);
+	}
+	
+	
+	function drawCurve(ctx, cx, cy, r, sa, ea, boo) {
+		ctx.beginPath();
+		ctx.arc(cx, cy, r, sa, ea, boo);
+		ctx.stroke();
+	}
+	
+	// L曲線	   
+	function drawLCurveRail(ctx) {
+		drawPoint(ctx, true);
+
+		var cx = endX - UNIT_LENGTH * Math.sin((endAngleDeg)* Math.PI / 180.0);
+		var cy = endY + UNIT_LENGTH * Math.cos((endAngleDeg)* Math.PI / 180.0);
+		var sa = (endAngleDeg - 90) * Math.PI / 180.0;
+		var ea = (endAngleDeg - 45) * Math.PI / 180.0;
+		
+		for (var i = 0; i < 4; i++) {
+			ctx.lineWidth = lineWidthArray[i];
+			ctx.strokeStyle = colorArray[i];
+			drawCurve(ctx, cx, cy, UNIT_LENGTH, sa, ea, false); 
+		}
+		
+		endX = cx + UNIT_LENGTH * Math.cos((endAngleDeg - 45) * Math.PI / 180.0);
+		endY = cy + UNIT_LENGTH * Math.sin((endAngleDeg - 45) * Math.PI / 180.0);
+		endAngleDeg += 45;
+
+		drawPoint(ctx, false);
+	}
+	
+	// R曲線	   
+	function drawRCurveRail(ctx) {
+		drawPoint(ctx, true);
+
+		var cx = endX + UNIT_LENGTH * Math.sin((endAngleDeg)* Math.PI / 180.0);
+		var cy = endY - UNIT_LENGTH * Math.cos((endAngleDeg)* Math.PI / 180.0);
+		var sa = (endAngleDeg + 90) * Math.PI / 180.0;
+		var ea = (endAngleDeg + 45) * Math.PI / 180.0;
+		
+		for (var i = 0; i < 4; i++) {
+			ctx.lineWidth = lineWidthArray[i];
+			ctx.strokeStyle = colorArray[i];
+			drawCurve(ctx, cx, cy, UNIT_LENGTH, ea, sa, false); 
+		}
+		
+		endX = cx + UNIT_LENGTH * Math.cos((endAngleDeg + 45) * Math.PI / 180.0);
+		endY = cy + UNIT_LENGTH * Math.sin((endAngleDeg + 45) * Math.PI / 180.0);
+		endAngleDeg -= 45;
+
+		drawPoint(ctx, false);
+	}
+	
+	function drawCourse(ctx, bSecondDraw) {
+		minX = minY = Number.MAX_SAFE_INTEGER;
+		maxX = maxY = -Number.MAX_SAFE_INTEGER;
+		
+		var count_straight = 0;
+		var count_curve = 0;
+		for (var i = 0; i < (bLoopCourse ? 8:1); i++) {
+			for(var j = 0; j < courseArray.length; j++) {
+				var repeatNum = 1;
+				var nextRailType = "";
+				switch(courseArray[j]) {
+				case "R": case "r": 
+				case "L": case "l": 
+				case "S": case "s": nextRailType = courseArray[j];  break;
+				default: 
+					var t = parseInt(courseArray[j], 10);
+					if(t > 0 && t < 10) {
+						repeatNum = t;
+						j++;
+						nextRailType = courseArray[j];
+					}
+				}
+				
+				for(var k = 0; k < repeatNum; k++) {
+					switch(nextRailType) {
+					case "R": case "r":  drawRCurveRail(ctx);  count_curve++; break;
+					case "L": case "l":  drawLCurveRail(ctx);  count_curve++; break;
+					case "S": case "s":  drawStraightRail(ctx); count_straight++; break;
+					}
+				}
+			}
+		}
+		
+		
+		if(bLoopCourse && !bSecondDraw) {
+			setViewForWholeShape(ctx);
+		}
+		
+		document.getElementById("rail_count").innerHTML = "曲線 " + count_curve + " / 直線 " + count_straight;
+	}
+	
+	function setViewForWholeShape(ctx) {
+		var canvas = document.getElementById(canvasName);
+		
+		var cx = (minX + maxX)/2;
+		var cy = (minY + maxY)/2;
+		var w = maxX - minX;
+		var s = 0.6 * canvas.height / w;
+		
+		// 適切なスケールと位置で再描画
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+				
+		ctx.translate(0, canvas.height);
+		ctx.scale(1, -1);
+		
+	
+		ctx.translate( canvas.width/2, canvas.height/2);
+		ctx.scale(s, s);
+		ctx.translate(-cx, -cy);
+		initCourse();
+		drawCourse(ctx, true);
+	}
+		
+	function draw(){
+		var canvas = document.getElementById(canvasName);
+		
+		if (canvas.getContext){
+			var ctx = canvas.getContext('2d');
+			
+			ctx.lineWidth = 10;
+			ctx.strokeStyle = 'rgb(0, 0, 255)';
+			ctx.fillStyle = 'rgb(255, 255, 255)';
+			
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+				
+			ctx.translate(0, canvas.height);
+			ctx.translate(screenMoveX, screenMoveY);
+			ctx.scale(1, -1);
+
+			ctx.translate( canvas.width/2, canvas.height/2);
+			ctx.scale(screenScale, screenScale);
+			ctx.translate(-canvas.width/2, -canvas.height/2);
+			initCourse();
+			drawCourse(ctx, false);
+		}
+	}
+	
+	function dataUpdate() {
+		var course = document.forms.id_form1.id_textBox1.value;
+		courseArray = course.split("");
+
+		bLoopCourse =  document.forms.id_form1.id_loop.checked;
+
+		window.location.hash = course + "," + (bLoopCourse ? "1" : "0");
+
+		initCourse();
+		draw();
+	}
+	
+	function clearData() {
+		document.forms.id_form1.id_textBox1.value = "";
+		screenScale = 1;
+		screenMoveX = 0;
+		screenMoveY = 0;
+		dataUpdate();
+	}
+	
+	function init() {
+		var hash = window.location.hash.substring(1) || "SR,0";
+		var hashArray = hash.split(",");
+
+		courseArray = hashArray[0].split("");
+		document.forms.id_form1.id_textBox1.value = hashArray[0];
+
+		bLoopCourse = hashArray[1] === "1";
+		document.forms.id_form1.id_loop.checked = bLoopCourse;
+
+		var canvas = document.getElementById(canvasName);
+		canvas.addEventListener('mousedown',  onMouseDown,  false);
+		canvas.addEventListener('mouseup',	onMouseUp,	false);
+		canvas.addEventListener('mousemove',  onMouseMove,  false);
+		
+		var mousewheelevent = 'onwheel' in document ? 'wheel' : 'onmousewheel' in document ? 'mousewheel' : 'DOMMouseScroll';
+		try{
+			document.addEventListener (mousewheelevent, onMouseWheel, false);
+		}catch(e){
+			//for legacy IE
+			document.attachEvent ("onmousewheel", onMouseWheel);
+		}
+		
+		draw();
+	}
+
+	function onMouseMove(e) {
+		var data = e.buttons;
+		var button_l = ((data & 0x0001) ? true : false);
+
+		if(button_l){
+			var rect = e.target.getBoundingClientRect();
+			var x = e.clientX - rect.left;
+   	 		var y = e.clientY - rect.top;
+		
+			var diffX = x - preMouseX;
+		 	var diffY = y - preMouseY;
+		
+			screenMoveX += diffX;
+			screenMoveY += diffY;
+		
+			preMouseX = x;
+			preMouseY = y;
+		
+			draw();
+		}
+		e.preventDefault();
+	}
+
+	function onMouseDown(e) {
+		var rect = e.target.getBoundingClientRect();
+		preMouseX = e.clientX - rect.left;
+		preMouseY = e.clientY - rect.top;
+	}
+
+	function onMouseUp(e) { }
+
+	function onMouseWheel(e) {
+		var e = window.event || e; // old IE support
+		var delta = e.deltaY ? -(e.deltaY) : e.wheelDelta ? e.wheelDelta : -(e.detail);
+		screenScale += 0.1 * ((delta < 0) ? -1: 1);
+		if(screenScale <= 0) { screenScale = 0.1; }
+		draw();
+		e.preventDefault();
+	}
+	
+	function buttonPressed(letter) {
+		document.forms.id_form1.id_textBox1.value += letter;
+		dataUpdate();
+	}
+	
+	function deleteLast() {
+		var len = document.forms.id_form1.id_textBox1.value.length;
+		if(len > 0) {
+			document.forms.id_form1.id_textBox1.value = 
+			document.forms.id_form1.id_textBox1.value.substr(0,len-1);
+		}
+		dataUpdate();
+	}
+	
+	</script>
+	<style type="text/css">
+	  canvas { border: 1px solid #000000; }
+	</style>
+  </head>
+  <body onload="init();">
+  <div id="main">
+  <div id="left">
+  <H1>鉄道模型コースシミュレータ</h1>
+  <hr>
+  <h2>使ってみよう</h2>
+  <div class="explain">
+  「コース表記」の欄に記号を追加して次のようにしてみよう。<br>
+  <center><em>SRRSLLLLL</em></center>
+  次に[ループ]にチェックを入れてみよう。
+  </div>
+  
+  <h2>説明</h2>
+  <div class="explain">
+  「コース表記」の欄に入力された記号列に従ってレールを配置します。<br>
+  使用できる記号は<em>S,L,R</em>の3種類で、それぞれ「S=直線」「L=左向きの曲線」「R=右向きの曲線」です。 記述した記号の順番でレールが連結されます。<br>
+  ※ キーボードから直接入力できます。同じ記号が続く場合、記号の前に数字1文字を付けた簡略表記ができます。<br>
+  （例：RRRRLL→4R2L）
+  </div>
+  
+  
+  <h2>注意事項</h2>
+  <div class="explain">
+  レールの交差を考慮していないため、実際には走行できないコースが生成される場合が多々あります。このアプリケーションの趣旨をご理解の上でお楽しみください。
+  </div>
+  
+  <h2>使用について</h2>
+  <div class="explain">
+  どなたでも自由にお使いいただけます。断りなく改変・再配布して結構です。まだまだ改良の余地はあると思います。<br>
+  JavaScriptで記述されており、現在表示中のHTMLファイルにこのアプリケーションの内容がすべて含まれています。<br>
+  <br>
+  （Chrome, Firefox上のみで動作確認しています）<br><br>
+  <a href="https://github.com/gam0022/jmitani-railway" target="_blank">現在、GitHub上に公開されています。</a>
+  
+  </div>
+ 
+  </div>
+  <div id="app">
+  <form name="form1" id="id_form1" action="">
+	コース表記  <input name="textBox1" id="id_textBox1" type="text" value="" size="40"
+	onkeydown="dataUpdate();" onkeyup="dataUpdate();" onkeypress="dataUpdate();" />
+	<input type="button" value="S" onclick="buttonPressed('S');" />
+	<input type="button" value="R" onclick="buttonPressed('R');" />
+	<input type="button" value="L" onclick="buttonPressed('L');" />
+	<input type="button" value="一文字削除" onclick="deleteLast();" />
+	<input type="button" value="クリア" onclick="clearData();" />
+	<input type="checkbox" value="Loop" onclick="dataUpdate();" id="id_loop"/>ループ
+  </form>
+  <div id="rail_count"></div>
+  <canvas id="mycanvas" width="800" height="700"></canvas>
+	マウスホイールで拡大縮小、左マウスドラッグで表示位置の移動ができます。
+   <div style="text-align: right;"> Ver.1.0.1 2016.3.17 Jun Mitani <a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
+  </div>
+  </div>
+  
+  </body>
+</html>
