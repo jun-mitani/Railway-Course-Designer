@@ -80,6 +80,8 @@ em {
 	
 	var maxX, maxY, minX, miY;
 	
+	var historyData = new Array();
+	
 	function initCourse() {
 		endX = INIT_X;
 		endY = INIT_Y;
@@ -182,7 +184,7 @@ em {
 
 		drawPoint(ctx, false);
 	}
-	
+	 
 	function drawCourse(ctx, bSecondDraw) {
 		minX = minY = Number.MAX_SAFE_INTEGER;
 		maxX = maxY = -Number.MAX_SAFE_INTEGER;
@@ -274,6 +276,7 @@ em {
 	
 	function dataUpdate() {
 		var course = document.forms.id_form1.id_textBox1.value;
+		historyData.push(course);
 		courseArray = course.split("");
 
 		bLoopCourse =  document.forms.id_form1.id_loop.checked;
@@ -363,6 +366,39 @@ em {
 		dataUpdate();
 	}
 	
+	function randomCreate() {
+		var newCourseArray = "";
+		var diff = 0;
+		var randomVal2 = Math.floor(Math.random() * 3);
+		while(true) {
+			var randomVal1 = Math.floor(Math.random() * 6)+1;
+			switch(randomVal2) {
+				case 0: for(var i = 0; i < randomVal1; i++) {newCourseArray += "L"; diff++;} break;
+				case 1: for(var i = 0; i < randomVal1; i++) {newCourseArray += "R"; diff--;} break;
+				//case 2: for(var i = 0; i < randomVal1; i++) {newCourseArray += "S"; } break;
+			}
+			
+			var adiff = Math.abs(diff);
+			//if(newCourseArray.length > 8 && (adiff == 1 || adiff == 3 || adiff == 5 || adiff == 7)) break;	
+			if(newCourseArray.length > 8 && (adiff == 3 || adiff == 5 || adiff == 7)) break;	
+			randomVal2 = (randomVal2 + 1 + Math.floor(Math.random() * 1)) % 3;
+		}
+		document.forms.id_form1.id_textBox1.value = newCourseArray;
+		dataUpdate();
+	}
+	
+	function backHistory() {
+		if(historyData.length == 0) return;
+		historyData.pop();
+		if(historyData.length == 0) {
+			document.forms.id_form1.id_textBox1.value = "";
+		} else {
+			document.forms.id_form1.id_textBox1.value = historyData.pop();
+		}
+		dataUpdate();
+	
+	}
+	
 	function deleteLast() {
 		var len = document.forms.id_form1.id_textBox1.value.length;
 		if(len > 0) {
@@ -392,7 +428,7 @@ em {
   <h2>説明</h2>
   <div class="explain">
   「コース表記」の欄に入力された記号列に従ってレールを配置します。<br>
-  使用できる記号は<em>S,L,R</em>の3種類で、それぞれ「S=直線」「L=左向きの曲線」「R=右向きの曲線」です。 記述した記号の順番でレールが連結されます。<br>
+  使用できる記号は <em>S</em>（直線）、<em>L</em>（左曲線）、<em>R</em>（右曲線）です。 <br>
   ※ キーボードから直接入力できます。同じ記号が続く場合、記号の前に数字1文字を付けた簡略表記ができます。<br>
   （例：RRRRLL→4R2L）
   </div>
@@ -400,7 +436,7 @@ em {
   
   <h2>注意事項</h2>
   <div class="explain">
-  レールの交差を考慮していないため、実際には走行できないコースが生成される場合が多々あります。このアプリケーションの趣旨をご理解の上でお楽しみください。
+  レールの交差を考慮していないため、実際には走行できないコースも生成されます。
   </div>
   
   <h2>使用について</h2>
@@ -409,8 +445,9 @@ em {
   JavaScriptで記述されており、現在表示中のHTMLファイルにこのアプリケーションの内容がすべて含まれています。<br>
   <br>
   （Chrome, Firefox上のみで動作確認しています）<br><br>
-  <a href="https://github.com/gam0022/jmitani-railway" target="_blank">現在、GitHub上に公開されています。</a>
-  
+  現在、GitHub上に公開されています。<br>
+  <a href="https://github.com/gam0022/jmitani-railway" target="_blank">gam0022/jmitani-railway</a><br>
+  <a href="https://github.com/jun-mitani/Railway-Course-Designer" target="_blank">jun-mitani/Railway-Course-Designer</a><br>
   </div>
  
   </div>
@@ -423,12 +460,14 @@ em {
 	<input type="button" value="L" onclick="buttonPressed('L');" />
 	<input type="button" value="一文字削除" onclick="deleteLast();" />
 	<input type="button" value="クリア" onclick="clearData();" />
+	<input type="button" value="ランダム" onclick="randomCreate();" />
+	<input type="button" value="1つ前" onclick="backHistory();" />
 	<input type="checkbox" value="Loop" onclick="dataUpdate();" id="id_loop"/>ループ
   </form>
   <div id="rail_count"></div>
   <canvas id="mycanvas" width="800" height="700"></canvas>
 	マウスホイールで拡大縮小、左マウスドラッグで表示位置の移動ができます。
-   <div style="text-align: right;"> Ver.1.0.1 2016.3.17 Jun Mitani <a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
+   <div style="text-align: right;"> 2016.7.8 Jun Mitani <a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
   </div>
   </div>
   
