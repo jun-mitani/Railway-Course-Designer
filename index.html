@@ -81,7 +81,9 @@ em {
 	var maxX, maxY, minX, miY;
 	
 	var historyData = new Array();
-	
+	var junctionStack = new Array();
+	var junctionStatus = new Array(); // {endX, endY, endAngleDeg}
+		
 	function initCourse() {
 		endX = INIT_X;
 		endY = INIT_Y;
@@ -184,7 +186,20 @@ em {
 
 		drawPoint(ctx, false);
 	}
-	 
+	
+	function pushStatus() {
+		junctionStack.push(new Array(endX, endY, endAngleDeg));
+	}
+	
+	function popStatus() {
+		if(junctionStack.length != 0) {
+			st = junctionStack.pop();
+			endX = st[0];
+			endY = st[1];
+			endAngleDeg = st[2];
+		}
+	}
+	
 	function drawCourse(ctx, bSecondDraw) {
 		minX = minY = Number.MAX_SAFE_INTEGER;
 		maxX = maxY = -Number.MAX_SAFE_INTEGER;
@@ -199,6 +214,8 @@ em {
 				case "R": case "r": 
 				case "L": case "l": 
 				case "S": case "s": nextRailType = courseArray[j];  break;
+				case "Y": case "y": pushStatus(); break;
+				case ".": popStatus(); break;
 				default: 
 					var t = parseInt(courseArray[j], 10);
 					if(t > 0 && t < 10) {
@@ -318,6 +335,7 @@ em {
 			document.attachEvent ("onmousewheel", onMouseWheel);
 		}
 		
+		junctionStack = new Array();
 		draw();
 	}
 
@@ -428,7 +446,7 @@ em {
   <h2>説明</h2>
   <div class="explain">
   「コース表記」の欄に入力された記号列に従ってレールを配置します。<br>
-  使用できる記号は <em>S</em>（直線）、<em>L</em>（左曲線）、<em>R</em>（右曲線）です。 <br>
+  使用できる記号は <em>S</em>（直線）&nbsp;<em>L</em>（左曲線）&nbsp;<em>R</em>（右曲線）&nbsp;<em>Y</em>（分岐点記録）&nbsp;<em>.</em>（ピリオド。分岐点から再開）です。 <br>
   ※ キーボードから直接入力できます。同じ記号が続く場合、記号の前に数字1文字を付けた簡略表記ができます。<br>
   （例：RRRRLL→4R2L）
   </div>
@@ -441,7 +459,7 @@ em {
   
   <h2>使用について</h2>
   <div class="explain">
-  どなたでも自由にお使いいただけます。断りなく改変・再配布して結構です。まだまだ改良の余地はあると思います。<br>
+  どなたでも自由にお使いいただけます。断りなく改変・再配布して結構です。<br>
   JavaScriptで記述されており、現在表示中のHTMLファイルにこのアプリケーションの内容がすべて含まれています。<br>
   <br>
   （Chrome, Firefox上のみで動作確認しています）<br><br>
@@ -467,7 +485,7 @@ em {
   <div id="rail_count"></div>
   <canvas id="mycanvas" width="800" height="700"></canvas>
 	マウスホイールで拡大縮小、左マウスドラッグで表示位置の移動ができます。
-   <div style="text-align: right;"> 2016.7.8 Jun Mitani <a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
+   <div style="text-align: right;"> 2016.7.8 Jun Mitani (Last Update 2019.1.2)<a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
   </div>
   </div>
   
